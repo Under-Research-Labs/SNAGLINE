@@ -26,7 +26,7 @@ handling so a dead endpoint stays silent even when the Monitor runs with
 ``fail_open=False``.
 
 Privacy: only ``FailureRisk`` fields are transmitted (score, trigger, ids,
-detail, timestamp) -- never ``StepEvent.metadata`` (project.md §11).
+detail, timestamp, severity) -- never ``StepEvent.metadata`` (project.md §11).
 """
 
 from __future__ import annotations
@@ -98,6 +98,7 @@ class WebhookSink:
             "trigger": risk.trigger,
             "detail": risk.detail,
             "timestamp": risk.timestamp,
+            "severity": risk.severity,
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(

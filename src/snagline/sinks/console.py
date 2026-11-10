@@ -20,7 +20,7 @@ module (``logger=``) or to any text ``stream`` (stdout, a file, etc.) -- so
 operators can fold SNAGLINE alerts into their existing log pipeline (issue #13).
 
 By design it only ever serializes ``FailureRisk`` fields (ids, score, trigger,
-detail, timestamp) -- never ``StepEvent.metadata`` -- so this sink cannot
+detail, timestamp, severity) -- never ``StepEvent.metadata`` -- so this sink cannot
 become an accidental data-exfiltration path (project.md §11).
 """
 
@@ -138,6 +138,7 @@ class ConsoleSink:
             "trigger": risk.trigger,
             "detail": risk.detail,
             "timestamp": risk.timestamp,
+            "severity": risk.severity,
         }
         line = json.dumps(payload)
         if self._logger is not None:

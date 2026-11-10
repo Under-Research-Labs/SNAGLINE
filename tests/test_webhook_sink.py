@@ -8,6 +8,8 @@ import urllib.error
 import urllib.request
 from unittest import mock
 
+import pytest
+
 from snagline.risk import FailureRisk
 from snagline.sinks.webhook import WebhookSink
 
@@ -52,6 +54,7 @@ def test_emit_posts_failure_risk_fields_only() -> None:
         "trigger": "loop",
         "detail": "action repeated 3x in last 4 steps",
         "timestamp": 1718300000.0,
+        "severity": "warning",
     }
     # The payload deliberately has no metadata field -- no exfiltration path.
     assert "metadata" not in body
@@ -107,6 +110,17 @@ def _risk_with_severity(severity: str) -> FailureRisk:
         timestamp=1718300000.0,
         severity=severity,
     )
+
+
+@pytest.mark.parametrize("severity", ["info", "warning", "critical"])
+def test_emit_preserves_explicit_severity(severity: str) -> None:
+    posted: list = []
+    with mock.patch(
+        "snagline.sinks.base._opener.open", side_effect=_posting_urlopen(posted)
+    ):
+        WebhookSink("http://hooks.example/alerts").emit(_risk_with_severity(severity))
+    assert len(posted) == 1
+    assert posted[0]["severity"] == severity
 
 
 def test_min_severity_info_passes_everything() -> None:
