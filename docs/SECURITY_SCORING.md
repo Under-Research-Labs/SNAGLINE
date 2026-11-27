@@ -8,7 +8,7 @@ The `snagline.security_scoring` module provides a dedicated pre-execution securi
 ## Score Calculation & Factors
 
 1. **Base Tool Sensitivity**:
-   Tools are assigned baseline sensitivity scores reflecting their execution capabilities:
+   Tools are assigned baseline sensitivity scores on a `0.0` to `100.0` scale reflecting their execution capabilities (values outside `[0.0, 100.0]` or non-finite values are rejected):
    - Shell / System execution (`Bash`, `Terminal`): `35.0`
    - Filesystem modification (`Write`, `Edit`, `Delete`): `20.0`–`30.0`
    - Read-only queries (`Read`, `Grep`, `Find`): `5.0`

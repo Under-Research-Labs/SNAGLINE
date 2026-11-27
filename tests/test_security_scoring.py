@@ -121,3 +121,44 @@ def test_security_scoring_rejects_nonfinite_tool_sensitivity():
         ValueError, match=r"tool_sensitivities\['bash'\] must be finite"
     ):
         SecurityScoringEngine(tool_sensitivities={"bash": float("inf")})
+
+
+def test_security_scoring_rejects_out_of_range_sensitivities():
+    """Negative sensitivities must not cancel findings into a 0.0 allow score,
+    and values above 100.0 exceed the documented 0-100 scale (issue #802)."""
+    for bad in (-100.0, -0.01, 100.01):
+        with pytest.raises(
+            ValueError,
+            match=r"unknown_tool_sensitivity must be within \[0\.0, 100\.0\]",
+        ):
+            SecurityScoringEngine(unknown_tool_sensitivity=bad)
+
+        with pytest.raises(
+            ValueError,
+            match=r"tool_sensitivities\['bash'\] must be within \[0\.0, 100\.0\]",
+        ):
+            SecurityScoringEngine(tool_sensitivities={"bash": bad})
+
+
+def test_security_scoring_accepts_boundary_sensitivities():
+    engine = SecurityScoringEngine(
+        unknown_tool_sensitivity=0.0,
+        tool_sensitivities={"bash": 100.0, "read": 0.0},
+    )
+    assert engine.unknown_tool_sensitivity == 0.0
+    assert engine.tool_sensitivities["bash"] == 100.0
+    assert engine.tool_sensitivities["read"] == 0.0
+
+    # Zero sensitivity does not cancel a critical finding
+    res = engine.evaluate(
+        "mystery_tool",
+        findings=[
+            {
+                "rule_id": "secret_exposure",
+                "severity": "critical",
+                "reason": "exposed key",
+            }
+        ],
+    )
+    assert res.score >= 70.0
+    assert res.decision in ("ask", "deny")

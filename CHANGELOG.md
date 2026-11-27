@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `SecurityScoringEngine` now rejects out-of-range sensitivities (outside
+  `[0.0, 100.0]`) for both `unknown_tool_sensitivity` and entries in
+  `tool_sensitivities`. Negative values previously passed the non-finite guard,
+  cancelled critical finding impacts in the sum, and clamped to 0.0 ("allow"),
+  creating a silent fail-open on destructive commands (#802).
 - `WebhookSink` and `ConsoleSink` now include the risk's explicit or derived
   severity in their JSON payloads (#772).
 - `DiagnosticMetrics.record_timing` rejects negative and non-finite samples
