@@ -81,16 +81,20 @@ def evaluate_request(
         # An uninformative action label must not suppress shell inspection
         # (issue #734): the CLI's `eval` defaults --action to "unknown", so a
         # tool name or a "command" key still marks the request as shell work.
-        if res_str and is_shell_request(tool_name, action, input_map):
-            for sf in inspect_command(res_str):
-                findings.append(
-                    {
-                        "rule_id": sf.rule_id,
-                        "severity": sf.severity,
-                        "reason": sf.reason,
-                        "command_signature": sf.command_signature,
-                    }
-                )
+        if is_shell_request(tool_name, action, input_map):
+            cmd_text = res_str
+            if not cmd_text:
+                cmd_text = str(input_map.get("command") or input_map.get("cmd") or "")
+            if cmd_text:
+                for sf in inspect_command(cmd_text):
+                    findings.append(
+                        {
+                            "rule_id": sf.rule_id,
+                            "severity": sf.severity,
+                            "reason": sf.reason,
+                            "command_signature": sf.command_signature,
+                        }
+                    )
     except ImportError:
         pass
 
