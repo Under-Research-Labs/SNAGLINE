@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `evaluate_request` now inspects shell commands carried in `tool_input`
+  (`command` or `cmd` key) when `resource` is `None`, closing a bypass where
+  destructive commands passed without a resource string skipped shell threat
+  detection entirely (#813).
 - `observe_openai_call` and `observe_anthropic_call` now accept and forward
   host-declared `intent` to `StepEvent`, matching the raw adapter. The default
   remains `None` for existing callers (#773).

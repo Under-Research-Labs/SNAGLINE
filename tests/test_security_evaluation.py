@@ -121,6 +121,38 @@ def test_evaluate_request_shell_threat_on_unknown_action() -> None:
     assert all("command" not in f["rule_id"] for f in res_plain["findings"])
 
 
+def test_evaluate_request_shell_in_tool_input_without_resource() -> None:
+    """Issue #813: shell inspection must run even when resource is None,
+    falling back to the command string in tool_input."""
+    res = evaluate_request(
+        tool_name="Bash",
+        action="execute",
+        resource=None,
+        tool_input={"command": "rm -rf /"},
+    )
+    assert res["decision"] == "deny"
+    rule_ids = [f["rule_id"] for f in res["findings"]]
+    assert "destructive_command" in rule_ids
+
+    # Also check "cmd" key variant
+    res_cmd = evaluate_request(
+        tool_name="Bash",
+        action="execute",
+        resource=None,
+        tool_input={"cmd": "rm -rf /"},
+    )
+    assert res_cmd["decision"] == "deny"
+
+    # Benign command in tool_input without resource still works
+    res_benign = evaluate_request(
+        tool_name="Bash",
+        action="execute",
+        resource=None,
+        tool_input={"command": "echo hello"},
+    )
+    assert res_benign["decision"] == "allow"
+
+
 def test_cli_eval_subcommand(capsys):
     ret = main(["eval", "--tool", "Read", "--action", "read", "--json"])
     assert ret == 0
