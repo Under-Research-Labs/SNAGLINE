@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `POST /security/eval` now applies the optional `agent_id` to agent-scoped
+  rules from a policy passed to `snagline serve --policy` (#816).
 - `observe_openai_call` and `observe_anthropic_call` now accept and forward
   host-declared `intent` to `StepEvent`, matching the raw adapter. The default
   remains `None` for existing callers (#773).

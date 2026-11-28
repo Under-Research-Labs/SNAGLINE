@@ -283,6 +283,18 @@ def test_main_serve_passes_auth_token_and_limits(monkeypatch):
     assert started["max_risks"] == 7
 
 
+def test_main_serve_passes_security_policy_path(monkeypatch, tmp_path):
+    started: dict = {}
+
+    def _fake_serve(monitor, **kwargs):
+        started.update(kwargs)
+
+    policy_path = tmp_path / "policy.json"
+    monkeypatch.setattr("snagline.server.http_server.serve", _fake_serve)
+    assert main(["serve", "--policy", str(policy_path)]) == 0
+    assert started["policy_path"] == str(policy_path)
+
+
 @pytest.mark.parametrize("bad", [0, -1, -1_000_000])
 def test_main_serve_rejects_a_non_positive_max_body_bytes(monkeypatch, capsys, bad):
     """``--max-body-bytes 0`` rejects every POST with 413: the cap is compared

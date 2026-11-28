@@ -50,21 +50,33 @@ Exits `0` if the policy strictly satisfies the schema, or `2` with validation er
 
 ## Sidecar HTTP Endpoint (`POST /security/eval`)
 
-The SNAGLINE sidecar server exposes `POST /security/eval`:
+The SNAGLINE sidecar server exposes `POST /security/eval` on its default port,
+`8787`. Start it with a policy file to apply global and per-agent rules:
+
+```bash
+snagline serve --policy config/security_policy.yaml
+```
 
 **Request:**
 ```http
 POST /security/eval HTTP/1.1
-Host: 127.0.0.1:9876
+Host: 127.0.0.1:8787
 Content-Type: application/json
 
 {
+  "agent_id": "worker",
   "tool_name": "Bash",
   "action": "execute",
   "resource": "rm -rf /tmp/test",
   "tool_input": {"command": "rm -rf /tmp/test"}
 }
 ```
+
+`agent_id` is optional. When supplied, it selects the matching `agent_rules`
+entry in the policy loaded with `snagline serve --policy`; when omitted, only
+global policy rules and the default decision apply. The request body accepts
+`agent_id` as a string alongside `tool_name`, `action`, `resource`, and
+`tool_input`.
 
 **Response (`200 OK`):**
 Returns the same evaluation payload as `snagline eval --json`.

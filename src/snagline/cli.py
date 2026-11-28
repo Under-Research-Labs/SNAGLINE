@@ -392,6 +392,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_serve.add_argument("--port", type=int, default=8787, help="Port [default: 8787].")
     p_serve.add_argument(
+        "--policy",
+        default=None,
+        help="Optional JSON/YAML security policy used by POST /security/eval.",
+    )
+    p_serve.add_argument(
         "--auth-token",
         default=None,
         help="Shared secret required on every request except GET /health "
@@ -1520,6 +1525,9 @@ def _cmd_serve(args: argparse.Namespace) -> int:
             if (args.certfile or args.keyfile or args.client_ca)
             else {}
         )
+        policy_kwargs = (
+            {"policy_path": args.policy} if getattr(args, "policy", None) else {}
+        )
         try:
             serve(
                 Monitor.default(config=cfg, sinks=sinks),
@@ -1545,6 +1553,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
                     else cfg.episode_ttl_seconds
                 ),
                 **tls_kwargs,
+                **policy_kwargs,
             )
         except OSError as exc:
             print(
