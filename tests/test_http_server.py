@@ -7,6 +7,7 @@ import socket
 import threading
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -29,6 +30,7 @@ def _start_server(
     auth_token: str | None = None,
     max_body_bytes: int | None = None,
     max_risks: int | None = None,
+    policy_path: str | None = None,
 ) -> tuple[Any, str]:
     kwargs: dict[str, Any] = {}
     if max_body_bytes is not None:
@@ -40,6 +42,7 @@ def _start_server(
         host="127.0.0.1",
         port=0,
         auth_token=auth_token,
+        policy_path=policy_path,
         **kwargs,
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -63,6 +66,43 @@ def test_health_endpoint() -> None:
         with urllib.request.urlopen(base + "/health", timeout=5) as resp:
             assert resp.status == 200
             assert json.loads(resp.read()) == {"status": "ok"}
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_security_eval_endpoint_applies_agent_scoped_policy(tmp_path: Path) -> None:
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(
+        json.dumps(
+            {
+                "version": "1.0",
+                "name": "agent-scoped-test",
+                "default_decision": "allow",
+                "agent_rules": {"worker": {"denied_tools": ["Bash"]}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    server, base = _start_server(_RecordingSink(), policy_path=str(policy_path))
+    try:
+        req = urllib.request.Request(
+            base + "/security/eval",
+            data=json.dumps(
+                {
+                    "tool_name": "Bash",
+                    "action": "execute",
+                    "agent_id": "worker",
+                }
+            ).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            assert resp.status == 200
+            result = json.loads(resp.read())
+        assert result["decision"] == "deny"
+        assert result["policy_decision"] == "deny"
     finally:
         server.shutdown()
         server.server_close()

@@ -598,6 +598,7 @@ def make_handler(
     metrics_format: str | None = None,
     read_timeout: float | None = None,
     episode_ttl_seconds: float | None = None,
+    policy_path: str | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     """Build a request-handler class bound to ``monitor``.
 
@@ -610,6 +611,8 @@ def make_handler(
     ``episode_ttl_seconds`` sets the TTL for ``snagline_episodes_active`` ids;
     when omitted ``SNAGLINE_EPISODE_TTL_SECONDS`` / ``Config.episode_ttl_seconds``
     decides, then disabled (None) by default (see ``_resolve_episode_ttl``).
+    ``policy_path`` supplies the optional JSON/YAML policy used by
+    ``POST /security/eval``.
     """
     tracker = HookTracker()
 
@@ -948,6 +951,10 @@ def make_handler(
             action = payload.get("action", "unknown")
             resource = payload.get("resource")
             tool_input = payload.get("tool_input", {})
+            agent_id = payload.get("agent_id")
+            if agent_id is not None and not isinstance(agent_id, str):
+                self._respond(400, {"error": "agent_id must be a string"})
+                return
 
             try:
                 res = evaluate_request(
@@ -955,6 +962,8 @@ def make_handler(
                     action=str(action),
                     resource=str(resource) if resource is not None else None,
                     tool_input=tool_input if isinstance(tool_input, dict) else {},
+                    agent_id=agent_id,
+                    policy_path=policy_path,
                 )
                 self._respond(200, res)
             except Exception as err:
@@ -1536,6 +1545,7 @@ def make_server(
     certfile: str | None = None,
     keyfile: str | None = None,
     client_ca: str | None = None,
+    policy_path: str | None = None,
 ) -> ThreadingHTTPServer:
     """Construct a ready-to-``serve_forever()`` sidecar server.
 
@@ -1564,6 +1574,7 @@ def make_server(
         metrics_format,
         resolved_read_timeout,
         episode_ttl_seconds,
+        policy_path,
     )
     if tls_context is None:
         return ThreadingHTTPServer((host, port), handler)
@@ -1589,6 +1600,7 @@ def serve(
     certfile: str | None = None,
     keyfile: str | None = None,
     client_ca: str | None = None,
+    policy_path: str | None = None,
 ) -> None:
     """Run the sidecar server in the foreground until interrupted."""
     tls_enabled = ssl_context is not None or certfile is not None
@@ -1606,6 +1618,7 @@ def serve(
         certfile=certfile,
         keyfile=keyfile,
         client_ca=client_ca,
+        policy_path=policy_path,
     )
     logger.info(
         "snagline sidecar listening on %s://%s:%d (POST /events, GET /health)%s",
